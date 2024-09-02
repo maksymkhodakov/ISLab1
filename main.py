@@ -7,7 +7,7 @@ sizekoef = 30
 generation = "WS"  # "WS" or "DFS"
 search = "A*"  # "G" or "A*"
 showpath = True
-ghostnumber = 6
+ghostnumber = 2 # default ghost number in level 1
 walldensity = 0.3
 
 import pygame
@@ -318,6 +318,60 @@ for i in range(ghostnumber):
         first = gh
     gn += 1
     objects.append(gh)
+
+# Global variables for levels and difficulty adjustments
+current_level = 1
+ghost_increment = 2  # Increase ghost number by 2 each level
+difficulty_increment = 20  # Increase difficulty by 20 each level
+
+
+# Function to reset the game for the next level
+def next_level():
+    global ghostnumber, Difficulty, player, objects, pacman, coin, path, current_level
+
+    current_level += 1
+    ghostnumber += ghost_increment  # Increase ghost number
+    Difficulty += difficulty_increment  # Increase difficulty
+
+    # Clear objects and set up new game state
+    objects = []
+
+    # Reset Pacman's position
+    pacman = (random.randint(0, WMaze - 1), random.randint(0, HMaze - 1))
+    player = Object()
+    player.x = pacman[0]
+    player.y = pacman[1]
+    player.xprev = player.posx
+    player.yprev = player.posy
+    player.typ = "Pacman"
+    player.color = (255, 255, 0)
+    objects.append(player)
+
+    # Reset coin position
+    coin = (random.randint(0, WMaze - 1), random.randint(0, HMaze - 1))
+    while abs(pacman[0] - coin[0]) + abs(pacman[1] - coin[1]) <= (WMaze // 4):
+        coin = (random.randint(0, WMaze - 1), random.randint(0, HMaze - 1))
+
+    # Reset ghosts with increased number
+    for i in range(ghostnumber):
+        gh = Object()
+        gh.x = random.randint(0, WMaze - 1)
+        gh.y = random.randint(0, HMaze - 1)
+        while abs(pacman[0] - gh.x) + abs(pacman[1] - gh.y) <= (WMaze // 4):
+            gh.x = random.randint(0, WMaze - 1)
+            gh.y = random.randint(0, HMaze - 1)
+        gh.xprev = gh.x
+        gh.yprev = gh.y
+        gh.typ = "Ghost"
+        gh.color = (random.randint(0, 255), random.randint(0, 255), 255)
+        gh.number = i
+        objects.append(gh)
+
+    # Reset the path for the new level
+    Entered = []
+    path = findPath(pacman[0], pacman[1], coin[0], coin[1], Entered)
+
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -382,16 +436,8 @@ while running:
                             obj.y = temppath[0][1]
                         elif obj.number == 1:
                             if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:
-                                # targetx1=player.x+(player.y-first.y)
-                                # targety1=player.y-(player.x-first.x)
                                 targetx = player.x - (player.y - first.y)
                                 targety = player.y + (player.x - first.x)
-                                # if( abs(obj.x-targetx1)+abs(obj.y-targety1)<=abs(obj.x-targetx2)+abs(obj.y-targety2) ):
-                                #     targetx=targetx1
-                                #     targety=targety1
-                                # else:
-                                #     targetx=targetx2
-                                #     targety=targety2
                             else:
                                 targetx = player.x
                                 targety = player.y
@@ -412,14 +458,6 @@ while running:
                             if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:
                                 targetx = player.x + (player.y - first.y)
                                 targety = player.y - (player.x - first.x)
-                                # targetx2=player.x-2*(player.y-first.y)
-                                # targety2=player.y+2*(player.x-first.x)
-                                # if( abs(obj.x-targetx1)+abs(obj.y-targety1)<=abs(obj.x-targetx2)+abs(obj.y-targety2) ):
-                                #     targetx=targetx1
-                                #     targety=targety1
-                                # else:
-                                #     targetx=targetx2
-                                #     targety=targety2
                             else:
                                 targetx = player.x
                                 targety = player.y
@@ -474,42 +512,9 @@ while running:
         if obj.typ == "Pacman":
             if obj.start == -1 or pygame.time.get_ticks() - obj.start >= 400:
                 if obj.x == coin[0] and obj.y == coin[1]:
-                    score = score + 1
+                    score += 1
                     print("Score: " + str(score))
-                    xc = 0
-                    yc = 0
-                    if (ghostnumber != 0):
-                        for objforcoin in objects:
-                            if (objforcoin.typ == "Ghost"):
-                                xc += objforcoin.x
-                                yc += objforcoin.y
-                        xc //= ghostnumber
-                        yc //= ghostnumber
-                        xc = xc + 2 * (xc - player.x)
-                        yc = yc + 2 * (yc - player.y)
-                        if (xc < 0):
-                            xc = 3
-                        if (xc >= WMaze):
-                            xc = WMaze - 4
-                        if (yc < 0):
-                            yc = 3
-                        if (yc >= HMaze):
-                            yc = HMaze - 4
-                        xc += random.randint(0, 4) - 2
-                        yc += random.randint(0, 4) - 2
-                        if (xc < 0):
-                            xc = 0
-                        if (xc >= WMaze):
-                            xc = WMaze - 1
-                        if (yc < 0):
-                            yc = 0
-                        if (yc >= HMaze):
-                            yc = HMaze - 1
-                        coin = (xc, yc)
-                    else:
-                        coin = (random.randint(0, WMaze - 1), random.randint(0, HMaze - 1))
-                        while (abs(obj.x - coin[0]) + abs(obj.y - coin[1]) <= (WMaze // 4)):
-                            coin = (random.randint(0, WMaze - 1), random.randint(0, HMaze - 1))
+                    next_level()  # Move to the next level when coin is collected
                 obj.start = pygame.time.get_ticks()
                 obj.xprev = obj.x
                 obj.yprev = obj.y
@@ -553,8 +558,13 @@ while running:
                     ((min(400, pygame.time.get_ticks() - obj.start)) / 400) * obj.x))
             obj.posy = (((max(0, 400 - pygame.time.get_ticks() + obj.start)) / 400) * obj.yprev + (
                     ((min(400, pygame.time.get_ticks() - obj.start)) / 400) * obj.y))
+
+            # Check for collisions with ghosts
+    for obj in objects:
+        if obj.typ == "Ghost" and obj.x == player.x and obj.y == player.y:
+            print("GAME OVER")
+            running = False
+            break
+
     graph()
-    if collision.happened:
-        print("GAME OVER")
-        running = False
     pygame.display.flip()
