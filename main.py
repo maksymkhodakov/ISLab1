@@ -333,6 +333,72 @@ def next_level():
     ghostnumber += ghost_increment  # Increase ghost number
     Difficulty += difficulty_increment  # Increase difficulty
 
+    # Regenerate maze
+    Cells.clear()
+    for i in range(HMaze):
+        row = []
+        for j in range(WMaze):
+            c = Cell()
+            c.Walls = [0, 0, 0, 0]
+            c.posx = j * sizekoef
+            c.posy = i * sizekoef
+            row.append(c)
+        Cells.append(row)
+    for i in range(HMaze):
+        Cells[i][0].Walls[2] = 1
+        Cells[i][WMaze - 1].Walls[0] = 1
+    for j in range(WMaze):
+        Cells[0][j].Walls[1] = 1
+        Cells[HMaze - 1][j].Walls[3] = 1
+    if generation == "WS":
+        possiblewalls = []
+        for i in range(WMaze):
+            for j in range(HMaze):
+                for k in range(2):
+                    if random.uniform(0, 1) <= walldensity:
+                        possiblewalls.append((i, j, k))
+        random.shuffle(possiblewalls)
+        for w in possiblewalls:
+            i = w[0]
+            j = w[1]
+            t = w[2]
+            if t == 0 and i < WMaze - 1:
+                if sum(Cells[j][i].Walls) < 2 and sum(Cells[j][i + 1].Walls) < 2:
+                    Cells[j][i].Walls[0] = 1
+                    Cells[j][i + 1].Walls[2] = 1
+                    if not CheckConnection():
+                        Cells[j][i].Walls[0] = 0
+                        Cells[j][i + 1].Walls[2] = 0
+            if t == 1 and j > 0:
+                if sum(Cells[j][i].Walls) < 2 and sum(Cells[j - 1][i].Walls) < 2:
+                    Cells[j][i].Walls[1] = 1
+                    Cells[j - 1][i].Walls[3] = 1
+                    if not CheckConnection():
+                        Cells[j][i].Walls[1] = 0
+                        Cells[j - 1][i].Walls[3] = 0
+            if t == 2 and i > 0:
+                if sum(Cells[j][i].Walls) < 2 and sum(Cells[j][i - 1].Walls) < 2:
+                    Cells[j][i].Walls[2] = 1
+                    Cells[j][i - 1].Walls[0] = 1
+                    if not CheckConnection():
+                        Cells[j][i].Walls[2] = 0
+                        Cells[j][i - 1].Walls[0] = 0
+            if t == 3 and j < HMaze - 1:
+                if sum(Cells[j][i].Walls) < 2 and sum(Cells[j + 1][i].Walls) < 2:
+                    Cells[j][i].Walls[3] = 1
+                    Cells[j + 1][i].Walls[1] = 1
+                    if not CheckConnection():
+                        Cells[j][i].Walls[3] = 0
+                        Cells[j + 1][i].Walls[1] = 0
+    if generation == "DFS":
+        used = []
+        for i in range(HMaze):
+            row = []
+            for j in range(WMaze):
+                row.append(False)
+            used.append(row)
+        dfs(0, 0, -1)
+
     # Clear objects and set up new game state
     objects = []
 
