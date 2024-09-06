@@ -2,12 +2,12 @@ WScreen = 1280
 HScreen = 720
 WMaze = 20
 HMaze = 20
-Difficulty = 100  # >=0
+Difficulty = 0  # >=0
 sizekoef = 30
 generation = "WS"  # "WS" or "DFS"
 search = "A*"  # "G" or "A*"
 showpath = True
-ghostnumber = 2 # default ghost number in level 1
+ghostnumber = 4  # default ghost number in level 1
 walldensity = 0.3
 
 import pygame
@@ -319,6 +319,15 @@ for i in range(ghostnumber):
     gn += 1
     objects.append(gh)
 
+
+def handleCellsWS():
+    Cells.clear()
+
+
+def handleCellsDFS():
+    Cells = []
+
+
 # Global variables for levels and difficulty adjustments
 current_level = 1
 ghost_increment = 2  # Increase ghost number by 2 each level
@@ -334,7 +343,14 @@ def next_level():
     Difficulty += difficulty_increment  # Increase difficulty
 
     # Regenerate maze
-    Cells.clear()
+    # Instead of Cells.clear() or Cells = [], let's recreate the grid explicitly
+
+    if generation == "WS":
+        handleCellsWS()
+
+    if generation == "DFS":
+        handleCellsDFS()
+
     for i in range(HMaze):
         row = []
         for j in range(WMaze):
@@ -350,6 +366,7 @@ def next_level():
     for j in range(WMaze):
         Cells[0][j].Walls[1] = 1
         Cells[HMaze - 1][j].Walls[3] = 1
+
     if generation == "WS":
         possiblewalls = []
         for i in range(WMaze):
@@ -445,6 +462,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_DOWN:
                 arrow = "Down"
+                next_level()
             if event.key == pygame.K_UP:
                 arrow = "Up"
             if event.key == pygame.K_LEFT:
