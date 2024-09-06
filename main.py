@@ -462,7 +462,6 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_DOWN:
                 arrow = "Down"
-                next_level()
             if event.key == pygame.K_UP:
                 arrow = "Up"
             if event.key == pygame.K_LEFT:
