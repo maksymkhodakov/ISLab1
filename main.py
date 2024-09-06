@@ -1,15 +1,17 @@
-WScreen = 1280
-HScreen = 720
-WMaze = 20
-HMaze = 20
-Difficulty = 0  # >=0
-sizekoef = 30
-generation = "WS"  # "WS" or "DFS"
-search = "A*"  # "G" or "A*"
-showpath = True
-ghostnumber = 4  # default ghost number in level 1
-walldensity = 0.3
+# Константи для розміру екрану та параметрів лабіринту
+WScreen = 1280  # Ширина екрану
+HScreen = 720   # Висота екрану
+WMaze = 20      # Ширина лабіринту (кількість клітин)
+HMaze = 20      # Висота лабіринту (кількість клітин)
+Difficulty = 0  # Рівень складності (>=0)
+sizekoef = 30   # Коефіцієнт розміру кожної клітинки
+generation = "WS"  # Метод генерації лабіринту: "WS" або "DFS"
+search = "A*"      # Алгоритм пошуку шляху: "G" (жадібний) або "A*"
+showpath = True    # Відображати шлях чи ні
+ghostnumber = 4    # Кількість привидів на першому рівні
+walldensity = 0.3  # Щільність стін у лабіринті
 
+# Імпорт бібліотек для графіки та алгоритмів
 import pygame
 import random
 import math
@@ -17,79 +19,102 @@ import queue
 import sys
 import heapq
 
+# Встановлюємо обмеження на кількість рекурсивних викликів
 sys.setrecursionlimit(WMaze * HMaze + 10000)
+
+# Визначаємо початкові координати для центрування лабіринту на екрані
 top = (HScreen - HMaze * sizekoef) // 2
 left = (WScreen - WMaze * sizekoef) // 2
 
 
+# Клас для опису кожної клітинки лабіринту
 class Cell:
-    Walls = [0, 0, 0, 0]
-    posx = 0
-    posy = 0
-    Cheese = 0
+    Walls = [0, 0, 0, 0]  # Стіни клітинки (0 - немає стіни, 1 - є стіна; порядок: праворуч, вгору, ліворуч, вниз)
+    posx = 0  # Координати клітинки на екрані по осі x
+    posy = 0  # Координати клітинки на екрані по осі y
+    Cheese = 0  # Позначка для монет/сиру
 
 
+# Клас для опису ігрових об'єктів (Pacman, привиди)
 class Object:
-    start = -1
-    posx = 0
-    posy = 0
-    x = 0
-    y = 0
-    xprev = 0
-    yprev = 0
-    typ = "Pacman"
-    direct = 0
-    color = (0, 0, 255)
-    number = -1
+    start = -1  # Час початку руху
+    posx = 0  # Позиція на екрані по осі x
+    posy = 0  # Позиція на екрані по осі y
+    x = 0  # Позиція на сітці по осі x
+    y = 0  # Позиція на сітці по осі y
+    xprev = 0  # Попередня позиція по осі x
+    yprev = 0  # Попередня позиція по осі y
+    typ = "Pacman"  # Тип об'єкта (Pacman або Ghost)
+    direct = 0  # Напрямок руху (0 - вправо, 1 - вгору, 2 - вліво, 3 - вниз)
+    color = (0, 0, 255)  # Колір об'єкта (за замовчуванням синій)
+    number = -1  # Номер об'єкта (важливо для привидів)
 
 
+# Клас для відстеження зіткнень між об'єктами
 class Collision:
-    happened = False
+    happened = False  # Ознака, чи відбулося зіткнення
 
 
+# Функція для відображення графіки гри
 def graph():
-    screen.fill((0, 0, 0))
+    screen.fill((0, 0, 0))  # Очищення екрану (чорний фон)
+
+    # Малювання стін для кожної клітинки лабіринту
     for row in Cells:
         for c in row:
+            # Якщо є стіна праворуч, малюємо її
             if c.Walls[0] == 1:
                 pygame.draw.line(screen, (0, 255, 0), (left + c.posx + sizekoef, top + c.posy),
                                  (left + c.posx + sizekoef, top + c.posy + sizekoef))
+            # Якщо є стіна вгору, малюємо її
             if c.Walls[1] == 1:
                 pygame.draw.line(screen, (0, 255, 0), (left + c.posx, top + c.posy),
                                  (left + c.posx + sizekoef, top + c.posy))
+            # Якщо є стіна ліворуч, малюємо її
             if c.Walls[2] == 1:
                 pygame.draw.line(screen, (0, 255, 0), (left + c.posx, top + c.posy),
                                  (left + c.posx, top + c.posy + sizekoef))
+            # Якщо є стіна вниз, малюємо її
             if c.Walls[3] == 1:
                 pygame.draw.line(screen, (0, 255, 0), (left + c.posx, top + c.posy + sizekoef),
                                  (left + c.posx + sizekoef, top + c.posy + sizekoef))
+
+    # Якщо потрібно показувати шлях, малюємо його
     if showpath:
         m = 1
         for i in range(WMaze):
             for j in range(HMaze):
                 Entered[j][i][0] = Entered[j][i][0] + 1
                 m = max(m, Entered[j][i][0])
+        # Малюємо всі відвідані клітинки різними відтінками сірого
         for i in range(WMaze):
             for j in range(HMaze):
                 color = (255 * Entered[j][i][0] // m, 255 * Entered[j][i][0] // m, 255 * Entered[j][i][0] // m)
                 pygame.draw.circle(screen, color,
                                    (left + sizekoef * i + sizekoef // 2, top + sizekoef * j + sizekoef // 2),
                                    sizekoef // 3)
+        # Малюємо червоний шлях
         for c in path:
             pygame.draw.circle(screen, (255, 0, 0),
                                (left + sizekoef * c[0] + sizekoef // 2, top + sizekoef * c[1] + sizekoef // 2),
                                sizekoef // 3)
+
+    # Малюємо всі об'єкти гри (Pacman та привиди)
     for obj in objects:
         pygame.draw.circle(screen, obj.color, (
             left + int(sizekoef * obj.posx) + sizekoef // 2, top + int(sizekoef * obj.posy) + sizekoef // 2),
                            sizekoef // 2)
+        # Перевіряємо зіткнення привидів з Pacman
         if obj.typ == "Ghost" and abs(obj.posx - player.posx) + abs(obj.posy - player.posy) < 0.2:
             collision.happened = True
+
+    # Малюємо монетку (coin)
     pygame.draw.circle(screen, (255, 255, 0),
                        (left + sizekoef * coin[0] + sizekoef // 2, top + sizekoef * coin[1] + sizekoef // 2),
                        sizekoef // 4)
 
 
+# Функція для перевірки з'єднаності клітинок лабіринту
 def CheckConnection():
     used = []
     for i in range(HMaze):
@@ -97,26 +122,32 @@ def CheckConnection():
         for j in range(WMaze):
             row.append(False)
         used.append(row)
+
+    # Використовуємо пошук у ширину (BFS) для перевірки з'єднання
     q = []
     q.append((0, 0))
     used[0][0] = True
+
     while (len(q) > 0):
         pos = q[0]
         x = pos[0]
         y = pos[1]
-        if Cells[x][y].Walls[0] == 0 and used[x][y + 1] == False:
+        # Рухаємося вгору, вниз, вліво, вправо, якщо немає стін
+        if Cells[x][y].Walls[0] == 0 and not used[x][y + 1]:
             q.append((x, y + 1))
             used[x][y + 1] = True
-        if Cells[x][y].Walls[1] == 0 and used[x - 1][y] == False:
+        if Cells[x][y].Walls[1] == 0 and not used[x - 1][y]:
             q.append((x - 1, y))
             used[x - 1][y] = True
-        if Cells[x][y].Walls[2] == 0 and used[x][y - 1] == False:
+        if Cells[x][y].Walls[2] == 0 and not used[x][y - 1]:
             q.append((x, y - 1))
             used[x][y - 1] = True
-        if Cells[x][y].Walls[3] == 0 and used[x + 1][y] == False:
+        if Cells[x][y].Walls[3] == 0 and not used[x + 1][y]:
             q.append((x + 1, y))
             used[x + 1][y] = True
         q.pop(0)
+
+    # Перевіряємо, чи всі клітинки з'єднані
     ans = True
     for i in used:
         for j in i:
@@ -124,58 +155,70 @@ def CheckConnection():
     return ans
 
 
+# Функція генерації лабіринту за допомогою алгоритму DFS
 def dfs(i, j, direc):
     used[j][i] = True
-    possibles = [0, 1, 2, 3]
-    random.shuffle(possibles)
+    possibles = [0, 1, 2, 3]  # Напрямки руху: вправо, вгору, вліво, вниз
+    random.shuffle(possibles)  # Випадковий порядок
+
     for decision in possibles:
+        # Рух вліво
         if decision == 2:
-            if i > 0 and not (used[j][i - 1]):
+            if i > 0 and not used[j][i - 1]:
                 dfs(i - 1, j, 0)
                 Cells[j][i].Walls[decision] = 0
             else:
                 Cells[j][i].Walls[2] = 1
+        # Рух вправо
         if decision == 0:
-            if i < WMaze - 1 and not (used[j][i + 1]):
+            if i < WMaze - 1 and not used[j][i + 1]:
                 dfs(i + 1, j, 2)
                 Cells[j][i].Walls[decision] = 0
             else:
                 Cells[j][i].Walls[0] = 1
+        # Рух вгору
         if decision == 1:
-            if j > 0 and not (used[j - 1][i]):
+            if j > 0 and not used[j - 1][i]:
                 dfs(i, j - 1, 3)
                 Cells[j][i].Walls[decision] = 0
             else:
                 Cells[j][i].Walls[1] = 1
+        # Рух вниз
         if decision == 3:
-            if j < HMaze - 1 and not (used[j + 1][i]):
+            if j < HMaze - 1 and not used[j + 1][i]:
                 dfs(i, j + 1, 1)
                 Cells[j][i].Walls[decision] = 0
             else:
                 Cells[j][i].Walls[3] = 1
+
     if direc >= 0:
         Cells[j][i].Walls[direc] = 0
 
 
+# Імовірність для визначення дій привидів
 def prob():
     return math.exp(-Difficulty / 3)
 
 
+# Функція оцінки шляху для алгоритму A*
 def prior(x, y, x1, y1, x2, y2):
-    if search == "G":
+    if search == "G":  # Жадібний пошук
         return abs(x - x2) + abs(y - y2)
-    if search == "A*":
+    if search == "A*":  # A*
         return abs(x - x2) + abs(y - y2) + (Entered[y][x][0] * 2) // 4
 
 
+# Пошук шляху між точками (x1, y1) і (x2, y2) з використанням A* або жадібного пошуку
 def findPath(x1, y1, x2, y2, Entered):
     for i in range(HMaze):
         row = []
         for j in range(WMaze):
-            row.append([-1, -1, -1])
+            row.append([-1, -1, -1])  # Ініціалізація масиву Entered
         Entered.append(row)
+
     q = []
-    heapq.heappush(q, (0, x1, y1, -1, -1))
+    heapq.heappush(q, (0, x1, y1, -1, -1))  # Додаємо початкову позицію
+
     while len(q) > 0:
         pos = heapq.heappop(q)
         x = pos[1]
@@ -186,8 +229,12 @@ def findPath(x1, y1, x2, y2, Entered):
             Entered[y][x] = [Entered[y][x][0], xprev, yprev]
         else:
             Entered[y][x] = [0, -1, -1]
+
+        # Якщо досягли мети
         if x == x2 and y == y2:
             break
+
+        # Перевіряємо напрямки для руху
         if x > 0 and Cells[y][x].Walls[2] == 0 and Entered[y][x - 1][0] == -1:
             Entered[y][x - 1][0] = Entered[y][x][0] + 1
             heapq.heappush(q, (prior(x - 1, y, x1, y1, x2, y2), x - 1, y, x, y))
@@ -200,12 +247,15 @@ def findPath(x1, y1, x2, y2, Entered):
         if y < HMaze - 1 and Cells[y][x].Walls[3] == 0 and Entered[y + 1][x][0] == -1:
             Entered[y + 1][x][0] = Entered[y][x][0] + 1
             heapq.heappush(q, (prior(x, y + 1, x1, y1, x2, y2), x, y + 1, x, y))
+
+    # Відновлення шляху
     xans = x2
     yans = y2
     ans = []
     while xans != x1 or yans != y1:
         ans.insert(0, (xans, yans))
         (xans, yans) = (Entered[yans][xans][1], Entered[yans][xans][2])
+
     return ans
 
 
@@ -219,6 +269,8 @@ screen = pygame.display.set_mode((WScreen, HScreen))
 pygame.display.set_caption("PacMan")
 screen.fill((0, 0, 10))
 pygame.display.flip()
+
+# Створення лабіринту
 Cells = []
 for i in range(HMaze):
     row = []
@@ -235,6 +287,8 @@ for i in range(HMaze):
 for j in range(WMaze):
     Cells[0][j].Walls[1] = 1
     Cells[HMaze - 1][j].Walls[3] = 1
+
+# Генерація лабіринту методом Wall-Set (WS) або DFS
 if generation == "WS":
     possiblewalls = []
     for i in range(WMaze):
@@ -455,6 +509,7 @@ def next_level():
     path = findPath(pacman[0], pacman[1], coin[0], coin[1], Entered)
 
 
+# Основний цикл гри
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -468,6 +523,7 @@ while running:
                 arrow = "Left"
             if event.key == pygame.K_RIGHT:
                 arrow = "Right"
+    # Обробка руху привидів
     for obj in objects:
         if obj.typ == "Ghost":
             if obj.start == -1 or pygame.time.get_ticks() - obj.start >= 600:
@@ -592,6 +648,8 @@ while running:
                     ((min(600, pygame.time.get_ticks() - obj.start)) / 600) * obj.x))
             obj.posy = (((max(0, 600 - pygame.time.get_ticks() + obj.start)) / 600) * obj.yprev + (
                     ((min(600, pygame.time.get_ticks() - obj.start)) / 600) * obj.y))
+
+        # Обробка руху пакмена
         if obj.typ == "Pacman":
             if obj.start == -1 or pygame.time.get_ticks() - obj.start >= 400:
                 if obj.x == coin[0] and obj.y == coin[1]:
@@ -642,7 +700,7 @@ while running:
             obj.posy = (((max(0, 400 - pygame.time.get_ticks() + obj.start)) / 400) * obj.yprev + (
                     ((min(400, pygame.time.get_ticks() - obj.start)) / 400) * obj.y))
 
-            # Check for collisions with ghosts
+    # колізії з привидами перевірка
     for obj in objects:
         if obj.typ == "Ghost" and obj.x == player.x and obj.y == player.y:
             print("GAME OVER")
