@@ -1,14 +1,14 @@
 # Константи для розміру екрану та параметрів лабіринту
 WScreen = 1280  # Ширина екрану
-HScreen = 720   # Висота екрану
-WMaze = 20      # Ширина лабіринту (кількість клітин)
-HMaze = 20      # Висота лабіринту (кількість клітин)
+HScreen = 720  # Висота екрану
+WMaze = 20  # Ширина лабіринту (кількість клітин)
+HMaze = 20  # Висота лабіринту (кількість клітин)
 Difficulty = 0  # Рівень складності (>=0)
-sizekoef = 30   # Коефіцієнт розміру кожної клітинки
+sizekoef = 30  # Коефіцієнт розміру кожної клітинки
 generation = "WS"  # Метод генерації лабіринту: "WS" або "DFS"
-search = "A*"      # Алгоритм пошуку шляху: "G" (жадібний) або "A*"
-showpath = True    # Відображати шлях чи ні
-ghostnumber = 4    # Кількість привидів на першому рівні
+search = "BFS"  # Алгоритм пошуку шляху: "G" (жадібний) або "A*" або BFS
+showpath = True  # Відображати шлях чи ні
+ghostnumber = 4  # Кількість привидів на першому рівні
 walldensity = 0.3  # Щільність стін у лабіринті
 
 # Імпорт бібліотек для графіки та алгоритмів
@@ -208,6 +208,57 @@ def prior(x, y, x1, y1, x2, y2):
         return abs(x - x2) + abs(y - y2) + (Entered[y][x][0] * 2) // 4
 
 
+# BFS алгоритм пошуку
+def bfs(x1, y1, x2, y2, Entered):
+    # Ініціалізація
+    for i in range(HMaze):
+        row = []
+        for j in range(WMaze):
+            row.append([-1, -1, -1])  # Ініціалізація масиву Entered
+        Entered.append(row)
+
+    # Черга для BFS
+    q = queue.Queue()
+    q.put((x1, y1, -1, -1))  # Додаємо початкову позицію
+
+    # Основний цикл BFS
+    while not q.empty():
+        x, y, xprev, yprev = q.get()
+
+        # Якщо це не початкова клітинка, заповнюємо Entered для відновлення шляху
+        if xprev != -1:
+            Entered[y][x] = [Entered[y][x][0], xprev, yprev]
+        else:
+            Entered[y][x] = [0, -1, -1]
+
+        # Якщо знайшли ціль
+        if x == x2 and y == y2:
+            break
+
+        # Рухаємося в усі доступні напрямки
+        if x > 0 and Cells[y][x].Walls[2] == 0 and Entered[y][x - 1][0] == -1:
+            Entered[y][x - 1][0] = Entered[y][x][0] + 1
+            q.put((x - 1, y, x, y))
+        if x < WMaze - 1 and Cells[y][x].Walls[0] == 0 and Entered[y][x + 1][0] == -1:
+            Entered[y][x + 1][0] = Entered[y][x][0] + 1
+            q.put((x + 1, y, x, y))
+        if y > 0 and Cells[y][x].Walls[1] == 0 and Entered[y - 1][x][0] == -1:
+            Entered[y - 1][x][0] = Entered[y][x][0] + 1
+            q.put((x, y - 1, x, y))
+        if y < HMaze - 1 and Cells[y][x].Walls[3] == 0 and Entered[y + 1][x][0] == -1:
+            Entered[y + 1][x][0] = Entered[y][x][0] + 1
+            q.put((x, y + 1, x, y))
+
+    # Відновлення шляху (від кінцевої до початкової точки)
+    path = []
+    xans, yans = x2, y2
+    while xans != x1 or yans != y1:
+        path.insert(0, (xans, yans))
+        xans, yans = Entered[yans][xans][1], Entered[yans][xans][2]
+
+    return path
+
+
 # Пошук шляху між точками (x1, y1) і (x2, y2) з використанням A* або жадібного пошуку
 def findPath(x1, y1, x2, y2, Entered):
     for i in range(HMaze):
@@ -215,6 +266,9 @@ def findPath(x1, y1, x2, y2, Entered):
         for j in range(WMaze):
             row.append([-1, -1, -1])  # Ініціалізація масиву Entered
         Entered.append(row)
+
+    if search == "BFS":
+        return bfs(x1, y1, x2, y2, Entered)
 
     q = []
     heapq.heappush(q, (0, x1, y1, -1, -1))  # Додаємо початкову позицію
