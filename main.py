@@ -451,8 +451,6 @@ def next_level():
     Difficulty += difficulty_increment  # Increase difficulty
 
     # Regenerate maze
-    # Instead of Cells.clear() or Cells = [], let's recreate the grid explicitly
-
     if generation == "WS":
         handleCellsWS()
 
@@ -565,75 +563,83 @@ def next_level():
 
 # Основний цикл гри
 while running:
+    # Обробляємо події, що надходять від користувача та системи
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
+        if event.type == pygame.QUIT:  # Якщо натиснуто кнопку "закрити" вікно гри
+            running = False  # Завершуємо цикл гри
+        elif event.type == pygame.KEYDOWN:  # Обробка натискань клавіш
             if event.key == pygame.K_DOWN:
-                arrow = "Down"
+                arrow = "Down"  # Користувач натиснув стрілку вниз
             if event.key == pygame.K_UP:
-                arrow = "Up"
+                arrow = "Up"  # Користувач натиснув стрілку вгору
             if event.key == pygame.K_LEFT:
-                arrow = "Left"
+                arrow = "Left"  # Користувач натиснув стрілку вліво
             if event.key == pygame.K_RIGHT:
-                arrow = "Right"
-    # Обробка руху привидів
+                arrow = "Right"  # Користувач натиснув стрілку вправо
+
+    # Обробляємо рух привидів
     for obj in objects:
-        if obj.typ == "Ghost":
+        if obj.typ == "Ghost":  # Якщо об'єкт — привид
             if obj.start == -1 or pygame.time.get_ticks() - obj.start >= 600:
-                if random.uniform(0, 1) < prob():
-                    obj.start = pygame.time.get_ticks()
-                    obj.xprev = obj.x
-                    obj.yprev = obj.y
-                    d = obj.direct
+                # Якщо привид готовий до нового руху (600 мс між ходами)
+                if random.uniform(0, 1) < prob():  # Випадковий рух з імовірністю, що залежить від складності гри
+                    obj.start = pygame.time.get_ticks()  # Фіксуємо час початку руху
+                    obj.xprev = obj.x  # Зберігаємо попередню позицію по осі x
+                    obj.yprev = obj.y  # Зберігаємо попередню позицію по осі y
+                    d = obj.direct  # Напрямок руху привида
+
+                    # Якщо є стіна в напрямку руху, шукаємо новий напрямок
                     if Cells[obj.y][obj.x].Walls[d] == 1:
                         r = random.randint(0, 1)
                         if r == 0:
-                            d = d + 1
-                            d = d % 4
+                            d = (d + 1) % 4  # Пробуємо поворот направо
                             if Cells[obj.y][obj.x].Walls[d] == 1:
-                                d = d + 2
-                                d = d % 4
+                                d = (d + 2) % 4  # Якщо стіна, пробуємо напрямок назад
                                 if Cells[obj.y][obj.x].Walls[d] == 1:
-                                    d = d + 3
-                                    d = d % 4
-                        if r == 1:
-                            d = d + 3
-                            d = d % 4
+                                    d = (d + 3) % 4  # Якщо знову стіна, пробуємо напрямок наліво
+                        else:
+                            d = (d + 3) % 4  # Пробуємо поворот наліво
                             if Cells[obj.y][obj.x].Walls[d] == 1:
-                                d = d + 2
-                                d = d % 4
+                                d = (d + 2) % 4  # Якщо стіна, пробуємо напрямок назад
                                 if Cells[obj.y][obj.x].Walls[d] == 1:
-                                    d = d + 1
-                                    d = d % 4
-                    obj.direct = d
+                                    d = (d + 1) % 4  # Якщо знову стіна, пробуємо напрямок направо
+                    obj.direct = d  # Оновлюємо напрямок руху
+
+                    # Залежно від обраного напрямку рухаємо привида
                     if d == 0:
-                        obj.x = obj.x + 1
+                        obj.x = obj.x + 1  # Рух вправо
                     elif d == 1:
-                        obj.y = obj.y - 1
+                        obj.y = obj.y - 1  # Рух вгору
                     elif d == 2:
-                        obj.x = obj.x - 1
+                        obj.x = obj.x - 1  # Рух вліво
                     elif d == 3:
-                        obj.y = obj.y + 1
+                        obj.y = obj.y + 1  # Рух вниз
                 else:
-                    obj.start = pygame.time.get_ticks()
-                    obj.xprev = obj.x
-                    obj.yprev = obj.y
+                    # Якщо привид переслідує Pacman
+                    obj.start = pygame.time.get_ticks()  # Фіксуємо час початку руху
+                    obj.xprev = obj.x  # Зберігаємо попередню позицію по осі x
+                    obj.yprev = obj.y  # Зберігаємо попередню позицію по осі y
+
+                    # Знаходимо шлях до Pacman'а
                     temp = []
                     temppath = findPath(obj.x, obj.y, player.x, player.y, temp)
                     temp = []
-                    playerpath = findPath(player.x, player.y, coin[0], coin[1], temp)
+                    playerpath = findPath(player.x, player.y, coin[0], coin[1], temp)  # Шлях Pacman до монети
+
+                    # Логіка для привида №1 - переслідує напряму
                     if len(temppath) > 0:
                         if obj.number == 0:
-                            obj.x = temppath[0][0]
+                            obj.x = temppath[0][0]  # Пересування по шляху
                             obj.y = temppath[0][1]
+                        # Логіка для привида №2 - передбачає рух Pacman
                         elif obj.number == 1:
-                            if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:
-                                targetx = player.x - (player.y - first.y)
+                            if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:  # Якщо привид далеко від Pacman'а
+                                targetx = player.x - (player.y - first.y)  # Передбачає позицію Pacman
                                 targety = player.y + (player.x - first.x)
-                            else:
+                            else:  # Якщо Pacman близько, переслідує напряму
                                 targetx = player.x
                                 targety = player.y
+                            # Обмеження цілей в межах лабіринту
                             if targetx < 0:
                                 targetx = 0
                             if targety < 0:
@@ -647,13 +653,15 @@ while running:
                             if len(temppath) > 0:
                                 obj.x = temppath[0][0]
                                 obj.y = temppath[0][1]
+                        # Логіка для привида №3 - інший перехресний вектор для передбачення руху Pacman'а
                         elif obj.number == 2:
-                            if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:
+                            if abs(obj.x - player.x) + abs(obj.y - player.y) > 3:  # Якщо привид далеко
                                 targetx = player.x + (player.y - first.y)
                                 targety = player.y - (player.x - first.x)
-                            else:
+                            else:  # Якщо Pacman близько, переслідує напряму
                                 targetx = player.x
                                 targety = player.y
+                            # Обмеження цілей в межах лабіринту
                             if targetx < 0:
                                 targetx = 0
                             if targety < 0:
@@ -667,21 +675,24 @@ while running:
                             if (len(temppath) > 0):
                                 obj.x = temppath[0][0]
                                 obj.y = temppath[0][1]
+                        # Логіка для інших привидів, які слідкують за Pacman
                         elif (len(temppath) <= 4):
                             obj.x = temppath[0][0]
                             obj.y = temppath[0][1]
                         else:
-                            point = len(playerpath) // (ghostnumber - 3)
+                            # Привид рухається до точки на шляху Pacman'а до монети
+                            point = len(playerpath) // (ghostnumber - 3)  # Розрахунок точки
                             point *= (obj.number - 2)
                             point = len(playerpath) - point
                             targetx = 0
                             targety = 0
                             if (point < len(playerpath) and point >= 0):
-                                targetx = playerpath[point][0]
+                                targetx = playerpath[point][0]  # Вибирає цільову точку
                                 targety = playerpath[point][1]
                             else:
                                 targetx = player.x
                                 targety = player.y
+                            # Невелике випадкове зміщення для уникнення передбачуваних шляхів
                             targetx += random.randint(0, 2) - 1
                             targety += random.randint(0, 2) - 1
                             if (targetx < 0):
@@ -698,21 +709,25 @@ while running:
                                 obj.x = temppath[0][0]
                                 obj.y = temppath[0][1]
 
+            # Оновлюємо позицію привида, використовуючи час для плавного руху
             obj.posx = (((max(0, 600 - pygame.time.get_ticks() + obj.start)) / 600) * obj.xprev + (
                     ((min(600, pygame.time.get_ticks() - obj.start)) / 600) * obj.x))
             obj.posy = (((max(0, 600 - pygame.time.get_ticks() + obj.start)) / 600) * obj.yprev + (
                     ((min(600, pygame.time.get_ticks() - obj.start)) / 600) * obj.y))
 
-        # Обробка руху пакмена
+        # Обробка руху Pacman
         if obj.typ == "Pacman":
             if obj.start == -1 or pygame.time.get_ticks() - obj.start >= 400:
+                # Якщо Pacman зібрав монету, збільшуємо рахунок і переходимо на наступний рівень
                 if obj.x == coin[0] and obj.y == coin[1]:
                     score += 1
                     print("Score: " + str(score))
-                    next_level()  # Move to the next level when coin is collected
-                obj.start = pygame.time.get_ticks()
-                obj.xprev = obj.x
-                obj.yprev = obj.y
+                    next_level()  # Перехід на наступний рівень
+                obj.start = pygame.time.get_ticks()  # Оновлюємо час початку руху
+                obj.xprev = obj.x  # Зберігаємо попередню позицію по осі x
+                obj.yprev = obj.y  # Зберігаємо попередню позицію по осі y
+
+                # Рух Pacman на основі натиснутих клавіш
                 if arrow == "Right" and Cells[obj.y][obj.x].Walls[0] == 0:
                     obj.x = obj.x + 1
                     obj.direct = 0
@@ -725,6 +740,7 @@ while running:
                 elif arrow == "Down" and Cells[obj.y][obj.x].Walls[3] == 0:
                     obj.y = obj.y + 1
                     obj.direct = 3
+                # Якщо клавіша не змінюється, Pacman рухається в тому ж напрямку
                 elif arrow != "" and Cells[obj.y][obj.x].Walls[obj.direct] == 0:
                     if obj.direct == 0:
                         obj.x = obj.x + 1
@@ -739,6 +755,7 @@ while running:
                         obj.y = obj.y + 1
                         arrow = "Down"
             else:
+                # Pacman обертається назад, якщо намагається рухатися в стіну
                 if ((arrow == "Left" and obj.direct == 0) or (arrow == "Up" and obj.direct == 3) or (
                         arrow == "Down" and obj.direct == 1)):
                     obj.xprev, obj.x = obj.x, obj.xprev
@@ -747,8 +764,10 @@ while running:
                     obj.direct += 2
                     obj.direct %= 4
 
+            # Оновлюємо шлях Pacman до монети
             Entered = []
             path = findPath(obj.x, obj.y, coin[0], coin[1], Entered)
+            # Плавний рух Pacman за часом
             obj.posx = (((max(0, 400 - pygame.time.get_ticks() + obj.start)) / 400) * obj.xprev + (
                     ((min(400, pygame.time.get_ticks() - obj.start)) / 400) * obj.x))
             obj.posy = (((max(0, 400 - pygame.time.get_ticks() + obj.start)) / 400) * obj.yprev + (
