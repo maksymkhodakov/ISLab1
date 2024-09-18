@@ -128,7 +128,7 @@ def CheckConnection():
     q.append((0, 0))
     used[0][0] = True
 
-    while (len(q) > 0):
+    while len(q) > 0:
         pos = q[0]
         x = pos[0]
         y = pos[1]
@@ -259,7 +259,7 @@ def bfs(x1, y1, x2, y2, Entered):
     return path
 
 
-# Пошук шляху між точками (x1, y1) і (x2, y2) з використанням A* або жадібного пошуку
+# Пошук шляху між точками (x1, y1) і (x2, y2) з використанням A* або жадібного пошуку або BFS
 def findPath(x1, y1, x2, y2, Entered):
     for i in range(HMaze):
         row = []
