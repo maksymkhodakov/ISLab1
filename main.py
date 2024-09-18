@@ -721,7 +721,6 @@ while running:
                 # Якщо Pacman зібрав монету, збільшуємо рахунок і переходимо на наступний рівень
                 if obj.x == coin[0] and obj.y == coin[1]:
                     score += 1
-                    print("Score: " + str(score))
                     next_level()  # Перехід на наступний рівень
                 obj.start = pygame.time.get_ticks()  # Оновлюємо час початку руху
                 obj.xprev = obj.x  # Зберігаємо попередню позицію по осі x
@@ -776,6 +775,7 @@ while running:
     # колізії з привидами перевірка
     for obj in objects:
         if obj.typ == "Ghost" and obj.x == player.x and obj.y == player.y:
+            print("Final score: ", score)
             print("GAME OVER")
             running = False
             break
